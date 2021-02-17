@@ -1,9 +1,0 @@
----
-platform: "linux"
-PAC_address: "localhost"
-PAC_port: ""
-SSH_port: "22"
-SSH_address: "localhost"
-local_proxy_address: "localhost"
-local_proxy_port: "3456"
-local_proxy_proto: "socks5"
