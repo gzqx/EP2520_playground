@@ -1,5 +1,4 @@
 ---
-asdf: adfa
 local_proxy:
   address: localhost
   port: '3456'
