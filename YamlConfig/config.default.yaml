@@ -1,0 +1,16 @@
+---
+name: "Tom"
+platform: "linux"
+pac:
+  address: "localhost"
+  port: ""
+ssh:
+  software: "openssh"
+  port: "22"
+  address: "localhost"
+local_proxy:
+  address: "localhost"
+  port: "3456"
+  proto: "socks5"
+vpn:
+  software: "openvpn"

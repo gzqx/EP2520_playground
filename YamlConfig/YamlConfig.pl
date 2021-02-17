@@ -4,6 +4,8 @@
 # Date              : 14.02.2021
 # Last Modified Date: 14.02.2021
 # Last Modified By  : gzqx <jerryzh0524@sjtu.edu.cn>
+
+package ConfigYaml;
 use warnings;
 use utf8;
 use 5.027;
@@ -29,22 +31,24 @@ my $isVerbose=0;
 #say $config->{ktt}->{like} or die $!;
 
 #change and read config file
+my $directory=$ARGV[0]."/";
+&testPrintVar($directory);
 say "Please input config file [Empty to use default]:";
 chomp (my $configFile_name=<STDIN>);
-my $default_configFile='config.default.yaml';
+my $default_configFilePath=$directory.'config.default.yaml';
 my $useDefault_bool=0;
 if ($configFile_name eq "") {
-	copy($default_configFile,"config.yaml") or die "Copy default config failed: $!";
+	copy($default_configFilePath,$directory."config.yaml") or die "Copy default config failed: $!";
 	$useDefault_bool=1;
 	$configFile_name="config.yaml";
 }
-my $configFileDefault=YAML::Tiny->read($default_configFile);
+my $configFileDefault=YAML::Tiny->read($default_configFilePath);
 my $configDefault=\%{$configFileDefault->[0]};
 #open(READ_CONFIG,'<',"config.yaml") or die "Config file don't exist: $!";
 #open(WRITE_CONFIG,'>',"config.yaml") or die "Cannot edit config file: $!";
 my $configFile;
 if (-e $configFile_name){
-	$configFile=YAML::Tiny->read($configFile_name);
+	$configFile=YAML::Tiny->read($directory.$configFile_name);
 } else {
 	die "Config file don't exist: $!";
 }
@@ -193,7 +197,8 @@ sub changeConfig {
 if ($changeConfig_bool==1) {	
 	&changeConfig($config,"Root");
 	$configFile->[0]=$config;
-	$configFile->write('config.yaml');
+	$configFile->write($directory.'config.yaml');
+	say "Config completed";
 }
 	#my $default_temp;
 	#$default_temp=$configDefault->[0]->{PAC_address};
@@ -248,6 +253,6 @@ sub testUpdateConfig{
 	}
 	if ($isTest) {
 		$configFile->[0]=$config;
-		$configFile->write('config.yaml');
+		$configFile->write($directory.'config.yaml');
 	}
 }

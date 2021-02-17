@@ -1,0 +1,17 @@
+---
+asdf: adfa
+local_proxy:
+  address: localhost
+  port: '3456'
+  proto: socks5
+name: Tom
+pac:
+  address: localhost
+  port: ''
+platform: linux
+ssh:
+  address: localhost
+  port: '22'
+  software: openssh
+vpn:
+  software: openvpn
