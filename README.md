@@ -14,7 +14,7 @@ Generate Makefile:
 perl Makefile.PL
 ```
 
-Install dependencies:
+Install rest dependencies:
 ```
 make
 ```
