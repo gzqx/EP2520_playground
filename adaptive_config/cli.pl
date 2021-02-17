@@ -12,6 +12,10 @@ use YAML::Tiny;
 use File::Copy;
 use Class::Struct;
 
+my $isTest=1;
+my $isVerbose=0;
+
+
 #my $yaml=YAML::Tiny->read('test.yaml');
 #my $config=$yaml->[0];
 #$config->{ktt}->{like}={current => 'salut'};
@@ -26,8 +30,7 @@ use Class::Struct;
 
 #change and read config file
 say "Please input config file [Empty to use default]:";
-my $configFile_name=<STDIN>;
-chomp $configFile_name;
+chomp (my $configFile_name=<STDIN>);
 my $default_configFile='config.default.yaml';
 my $useDefault_bool=0;
 if ($configFile_name eq "") {
@@ -35,16 +38,16 @@ if ($configFile_name eq "") {
 	$useDefault_bool=1;
 	$configFile_name="config.yaml";
 }
-my $configDefault=YAML::Tiny->read("config.default,yaml");
+my $configFileDefault=YAML::Tiny->read($default_configFile);
+my $configDefault=\%{$configFileDefault->[0]};
 #open(READ_CONFIG,'<',"config.yaml") or die "Config file don't exist: $!";
 #open(WRITE_CONFIG,'>',"config.yaml") or die "Cannot edit config file: $!";
 my $configFile;
 if (-e $configFile_name){
-	my $configFile=YAML::Tiny->read($configFile_name);
+	$configFile=YAML::Tiny->read($configFile_name);
 } else {
 	die "Config file don't exist: $!";
 }
-
 my $config=\%{$configFile->[0]};
 my $changeConfig_bool=0;
 if ($useDefault_bool) {
@@ -68,16 +71,21 @@ if (grep(/^$changeConfigInput/, @yes)) {
 }
 sub yesNo {
 	#Handle yes and no judgement
-	my $input=pop @_;
-	if (grep(/^$input/, @yes)) {
+	my ($input,$default)=@_;
+	if($input eq ""){
+		if ($default) {
+			return 1;
+		}else{
+			return 0;
+		}
+	} elsif (grep(/^$input/, @yes)) {
 		return 1;
 	} elsif (grep(/^$input/, @no)){
 		return 0;
-	} elsif ($changeConfigInput !=""){
+	} elsif (not $input eq ""){
 		say "Invalid input, assuming affirmative.";
-		return 0;
+		return 1;
 	}
-	return 1;
 }
 
 
@@ -99,79 +107,147 @@ sub yesNo {
 #	local_proxy=>Address->new(ip=>$configFileDoc->{local_proxy_address},port=>$configFileDoc->{local_proxy_port},protocol=>$configFileDoc->{local_proxy_proto}),
 #);
 
+
+
 sub changeConfig {
 	# accept hash of (part) of config file
-	my ($hash)=@_;
-	say "Do you want to add new settings or change old config? (add/change)";
-	chomp(my $isChange=<STDIN>);
-	if ($isChange eq "add") {
-		say "What is its name?";
-		chomp(my $newKey_temp=<STDIN>);
-		say "Does it have multiple setting(y/n)? [y]";
-		chomp(my $isMultiple=<STDIN>);
-		if (&yesNo($isMultiple)) {
-			&changeConfig(%{$hash->{$newKey_temp}});
-		} else{
-			say "What is its value?";
-			chomp(my $newValue_temp=<STDIN>);
+	my ($hash,$father)=@_;
+	while(1){
+		say "Do you want to add new settings or change old config under $father? (add/change) [empty to change, input \"n\" to other config]";
+		chomp(my $isChange=<STDIN>);
+		if ($isChange eq 'n') {
+			return;
 		}
-	} elsif ($isChange eq "change") {
-		foreach my $node_temp (keys %$config) {
-			if(not ref $config->{$node_temp} eq ref {}){
-				if ($node_temp eq "platform") {
-					say "What is your Platform(Linux/Windows/MacOS)? [empty to auto detect]";
-					chomp(my $platform_temp=<STDIN>);
-					if ($platform_temp eq "") {	
-						$config->{platform}=$^O;
-					} elsif($platform_temp=="linux" or $platform_temp=="Linux"){
-						$config->{platform}="linux";
-					} elsif($platform_temp=="windows" or $platform_temp=="Windows"){
-						$config->{platform}="windows";
-					} elsif($platform_temp=="macOS" or $platform_temp=="MacOS"){
-						$config->{platform}="macos";
-					} elsif($platform_temp=="android" or $platform_temp=="Android"){
-						$config->{platform}="android";
-					} 
-					continue;
-				}
-				my $default_temp;
-				$default_temp=$configDefault->[0]->{$node_temp};
-				say "Please input $node_temp: [empy to use default ($default_temp)]";
-				chomp(my $input_temp=<STDIN>);
-				$hash->{$node_temp}=$input_temp;
+		
+		if ($isChange eq "add") {
+			say "What is its name?";
+			chomp(my $newKey_temp=<STDIN>);
+			say "Does it have multiple setting(y/n)? [n]";
+			chomp(my $isMultiple=<STDIN>);
+			if (&yesNo($isMultiple,0)) {
+				&changeConfig(\%{$hash->{$newKey_temp}},$newKey_temp);
 			} else{
-				say "Following configs $node_temp which has multiple settings.";
-				&changeConfig(%{$hash->{$node_temp}});
+				say "What is its value?";
+				chomp(my $newValue_temp=<STDIN>);
+				$hash->{$newKey_temp}=$newValue_temp;
 			}
+			&testUpdateConfig;
+		} elsif ($isChange eq "change" || $isChange eq "") {
+			foreach my $node_temp (keys %{$hash}) {
+				if(not ref $hash->{$node_temp} eq ref {}){
+					if ($node_temp eq "platform") {
+						say "What is your Platform(Linux/Windows/MacOS)? [empty to auto detect]";
+						chomp(my $platform_temp=<STDIN>);
+						if ($platform_temp eq "") {	
+							$config->{platform}=$^O;
+						} elsif($platform_temp eq "linux" or $platform_temp eq "Linux"){
+							$config->{platform}="linux";
+						} elsif($platform_temp eq "windows" or $platform_temp eq "Windows"){
+							$config->{platform}="windows";
+						} elsif($platform_temp eq "macOS" or $platform_temp eq "MacOS" or $platform_temp eq "macos"){
+							$config->{platform}="macos";
+						} elsif($platform_temp eq "android" or $platform_temp eq "Android"){
+							$config->{platform}="android";
+						} else{
+							say "Unknown OS, assuming Linux";
+						}
+						next;
+					}
+					my $default_temp=$hash->{$node_temp};
+					my $input_temp;
+					if (not defined $hash->{$node_temp}) {
+						say "Please input $node_temp: [empty for none]";
+						chomp($input_temp=<STDIN>);
+						$hash->{$node_temp}=$input_temp;
+					}else{
+						say "Please input $node_temp: [empty to skip, current value is ($default_temp), input \"-d\" to delete this]";
+						chomp($input_temp=<STDIN>);
+						$hash->{$node_temp}=$input_temp;
+						if ($input_temp eq "") {
+							next;
+						} elsif($input_temp eq "-d"){
+							delete $hash->{$node_temp};
+						}
+					}
+				} else{
+					say "Do you want to configure $node_temp which has multiple settings? [empty to config, input \"n\" to skip this, input \"d\" to delete this] ";
+					chomp(my $input_temp=<STDIN>);
+					if ($input_temp eq "") {
+						&changeConfig(\%{$hash->{$node_temp}},$node_temp);
+					}elsif($input_temp eq "d"){
+						delete $hash->{$node_temp};
+					}else{
+						next;
+					}
+				}
+			}
+			&testUpdateConfig;
+		} else {
+			say "Invalid input $!";
+			next;
 		}
-	} else {
-		die "Invalid input $!";
 	}
 }
 
 
 if ($changeConfig_bool==1) {	
-	my $default_temp;
-	$default_temp=$configDefault->[0]->{PAC_address};
-	say "What is the ip/address of PAC list? [empty to use default ($default_temp)]";
-	chomp(my $pacAddress_temp=<STDIN>);
-	$default_temp=$configDefault->[0]->{PAC_port};
-	say "What is the port of PAC list? [empty to use default ($default_temp)]";
-	chomp(my $pacPort_temp=<STDIN>);
-	$default_temp=$configDefault->[0]->{SSH_address};
-	say "What is the ip/address of SSH? [empty to use default ($default_temp)]";
-	chomp(my $sshAddress_temp=<STDIN>);
-	$default_temp=$configDefault->[0]->{SSH_port};
-	say "What is the port of SSH? [empty to use default ($default_temp)]";
-	chomp(my $sshPort_temp=<STDIN>);
-	$default_temp=$configDefault->[0]->{local_proxy_address};
-	say "What is the ip/address of local proxy? [empty to use default ($default_temp)]";
-	chomp(my $localProxyAddress_temp=<STDIN>);
-	$default_temp=$configDefault->[0]->{local_proxy_port};
-	say "What is the port of local proxy? [empty to use default ($default_temp)]";
-	chomp(my $localProxyPort_temp=<STDIN>);
-	$default_temp=$configDefault->[0]->{local_proxy_proto};
-	say "What is the protocol of local proxy? [empty to use default ($default_temp)]";
-	chomp(my $localProxyProto_temp=<STDIN>);
+	&changeConfig($config,"Root");
+	$configFile->[0]=$config;
+	$configFile->write('config.yaml');
 }
+	#my $default_temp;
+	#$default_temp=$configDefault->[0]->{PAC_address};
+	#say "What is the ip/address of PAC list? [empty to use default ($default_temp)]";
+	#chomp(my $pacAddress_temp=<STDIN>);
+	#$default_temp=$configDefault->[0]->{PAC_port};
+	#say "What is the port of PAC list? [empty to use default ($default_temp)]";
+	#chomp(my $pacPort_temp=<STDIN>);
+	#$default_temp=$configDefault->[0]->{SSH_address};
+	#say "What is the ip/address of SSH? [empty to use default ($default_temp)]";
+	#chomp(my $sshAddress_temp=<STDIN>);
+	#$default_temp=$configDefault->[0]->{SSH_port};
+	#say "What is the port of SSH? [empty to use default ($default_temp)]";
+	#chomp(my $sshPort_temp=<STDIN>);
+	#$default_temp=$configDefault->[0]->{local_proxy_address};
+	#say "What is the ip/address of local proxy? [empty to use default ($default_temp)]";
+	#chomp(my $localProxyAddress_temp=<STDIN>);
+	#$default_temp=$configDefault->[0]->{local_proxy_port};
+	#say "What is the port of local proxy? [empty to use default ($default_temp)]";
+	#chomp(my $localProxyPort_temp=<STDIN>);
+	#$default_temp=$configDefault->[0]->{local_proxy_proto};
+	#say "What is the protocol of local proxy? [empty to use default ($default_temp)]";
+	#chomp(my $localProxyProto_temp=<STDIN>);
 
+sub testPrintVar{
+	my ($package, $filename, $line) = caller;
+	say "I am printing variable from call at $filename Line $line.";
+	if ($isTest) {
+		say "@_";
+	}
+}
+sub printHash {
+	my ($package, $filename, $line) = caller;
+	say "I am printing Hash from call at $filename Line $line.";
+	if ($isTest) {
+		my ($conf)=@_;
+		foreach my $temp (keys %{$conf}){
+			if (ref $conf->{$temp} eq ref {}) {
+				foreach my $sub_temp (keys %{$conf->{$temp}}){
+					say "$temp, $sub_temp,$conf->{$temp}->{$sub_temp}";
+				}
+			}else{
+				say "$temp, $conf->{$temp}";
+			}
+		}
+	}
+}
+sub testUpdateConfig{
+	if ($isVerbose) {
+		my ($package, $filename, $line) = caller;
+		say "I am updating Config hash from call at $filename Line $line.";
+	}
+	if ($isTest) {
+		$configFile->[0]=$config;
+		$configFile->write('config.yaml');
+	}
+}
