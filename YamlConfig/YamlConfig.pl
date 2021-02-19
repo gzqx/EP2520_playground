@@ -14,7 +14,7 @@ use YAML::Tiny;
 use File::Copy;
 use Class::Struct;
 
-my $isTest=1;
+my $isTest=0;
 my $isVerbose=0;
 
 
@@ -224,15 +224,19 @@ if ($changeConfig_bool==1) {
 	#chomp(my $localProxyProto_temp=<STDIN>);
 
 sub testPrintVar{
-	my ($package, $filename, $line) = caller;
-	say "I am printing variable from call at $filename Line $line.";
+	if ($isVerbose) {
+		my ($package, $filename, $line) = caller;
+		say "I am printing variable from call at $filename Line $line.";
+	}
 	if ($isTest) {
 		say "@_";
 	}
 }
 sub printHash {
-	my ($package, $filename, $line) = caller;
-	say "I am printing Hash from call at $filename Line $line.";
+	if ($isVerbose) {
+		my ($package, $filename, $line) = caller;
+		say "I am printing Hash from call at $filename Line $line.";
+	}
 	if ($isTest) {
 		my ($conf)=@_;
 		foreach my $temp (keys %{$conf}){
