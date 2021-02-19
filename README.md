@@ -6,8 +6,8 @@ Since this course allows usage of all open-source code, I am leaving the reposit
 ## Usage
 ### Make
 Dependencies:
-- perl > 5.027
-- inc::Module::Install > 1.19 `cpanm install inc::Module::Install`
+- perl >= 5.027
+- inc::Module::Install >= 1.19 `cpanm install inc::Module::Install`
 
 Generate Makefile:
 ```
